@@ -1,0 +1,202 @@
+{% extends "voting/base.html" %}
+
+{% block title %}Election Results - Online Voting System{% endblock %}
+
+{% block content %}
+<div class="results-section py-5">
+    <div class="container">
+        <!-- Results Header -->
+        <div class="row mb-5">
+            <div class="col-12">
+                <div class="results-header text-center">
+                    <h1 class="display-4 fw-bold text-dark mb-3">
+                        <i class="fas fa-chart-bar text-success me-3"></i>
+                        Election Results
+                    </h1>
+                    <p class="lead text-muted">Live voting results and statistics</p>
+                    <div class="alert alert-info d-inline-block">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Results are updated in real-time
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Total Votes -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="text-center">
+                    <h3 class="text-primary">Total Votes Cast: <span class="badge bg-primary fs-4">{{ total_votes }}</span></h3>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Results Cards -->
+        {% if candidates_data %}
+        <div class="row g-4">
+            {% for data in candidates_data %}
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="result-card h-100 {% if forloop.counter == 1 and data.vote_count > 0 %}winner-card{% endif %}">
+                    {% if forloop.counter == 1 and data.vote_count > 0 %}
+                    <div class="winner-badge">
+                        <i class="fas fa-crown"></i> Winner
+                    </div>
+                    {% endif %}
+                    
+                    <div class="result-header text-center">
+                        <div class="candidate-avatar mb-3">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <h4 class="candidate-name fw-bold">{{ data.candidate.name }}</h4>
+                        <p class="candidate-party text-muted">{{ data.candidate.description }}</p>
+                    </div>
+                    
+                    <div class="result-body text-center">
+                        <div class="vote-count mb-3">
+                            <h2 class="text-primary fw-bold">{{ data.vote_count }}</h2>
+                            <p class="text-muted mb-0">Votes</p>
+                        </div>
+                        
+                        <div class="vote-percentage mb-3">
+                            <div class="progress mb-2" style="height: 25px;">
+                                <div class="progress-bar bg-success" 
+                                     style="width: {{ data.vote_percentage }}%"
+                                     role="progressbar">
+                                    {{ data.vote_percentage|floatformat:1 }}%
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="rank-badge">
+                            {% if forloop.counter == 1 and data.vote_count > 0 %}
+                                <span class="badge bg-warning fs-6">
+                                    <i class="fas fa-trophy me-1"></i>1st Place
+                                </span>
+                            {% elif forloop.counter == 2 %}
+                                <span class="badge bg-secondary fs-6">2nd Place</span>
+                            {% elif forloop.counter == 3 %}
+                                <span class="badge bg-info fs-6">3rd Place</span>
+                            {% elif forloop.counter == 4 %}
+                                <span class="badge bg-light text-dark fs-6">4th Place</span>
+                            {% elif forloop.counter == 5 %}
+                                <span class="badge bg-light text-dark fs-6">5th Place</span>
+                            {% elif forloop.counter == 6 %}
+                                <span class="badge bg-light text-dark fs-6">6th Place</span>
+                            {% elif forloop.counter == 7 %}
+                                <span class="badge bg-light text-dark fs-6">7th Place</span>
+                            {% elif forloop.counter == 8 %}
+                                <span class="badge bg-light text-dark fs-6">8th Place</span>
+                            {% elif forloop.counter == 9 %}
+                                <span class="badge bg-light text-dark fs-6">9th Place</span>
+                            {% elif forloop.counter == 10 %}
+                                <span class="badge bg-light text-dark fs-6">10th Place</span>
+                            {% else %}
+                                <span class="badge bg-light text-dark fs-6">{{ forloop.counter }} Place</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="row">
+            <div class="col-12">
+                <div class="alert alert-warning text-center">
+                    <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
+                    <h4>No Results Available</h4>
+                    <p class="mb-0">No votes have been cast yet or no candidates are available.</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Refresh Info -->
+        <div class="row mt-5">
+            <div class="col-12 text-center">
+                <p class="text-muted">
+                    <i class="fas fa-sync-alt me-2"></i>
+                    Results are updated automatically. Last updated: <span id="lastUpdated"></span>
+                </p>
+                <button class="btn btn-outline-primary" onclick="location.reload()">
+                    <i class="fas fa-refresh me-2"></i>Refresh Results
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Update last updated time
+document.addEventListener('DOMContentLoaded', function() {
+    const now = new Date();
+    document.getElementById('lastUpdated').textContent = now.toLocaleTimeString();
+    
+    // Auto-refresh every 30 seconds
+    setInterval(() => {
+        location.reload();
+    }, 30000);
+});
+
+// Add animation to progress bars
+document.querySelectorAll('.progress-bar').forEach(bar => {
+    const width = bar.style.width;
+    bar.style.width = '0%';
+    setTimeout(() => {
+        bar.style.transition = 'width 1s ease-in-out';
+        bar.style.width = width;
+    }, 100);
+});
+</script>
+
+<style>
+.result-card {
+    background: #fff;
+    border-radius: 20px;
+    padding: 30px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+    position: relative;
+    border: 2px solid transparent;
+}
+
+.result-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+}
+
+.winner-card {
+    border-color: #ffc107;
+    background: linear-gradient(135deg, #fff9e6 0%, #ffffff 100%);
+}
+
+.winner-badge {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    background: linear-gradient(135deg, #ffc107 0%, #ff8c00 100%);
+    color: white;
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 0.85rem;
+    box-shadow: 0 5px 15px rgba(255, 193, 7, 0.4);
+}
+
+.candidate-image {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.results-header {
+    background: #fff;
+    border-radius: 20px;
+    padding: 40px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+</style>
+{% endblock %}

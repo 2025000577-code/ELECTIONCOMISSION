@@ -1,0 +1,172 @@
+{% extends 'voting/base.html' %}
+{% load static %}
+
+{% block title %}Verify Users{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h2><i class="fas fa-user-check"></i> Identity Verification</h2>
+            <p class="text-muted">Review and verify user identities with ID card proofs</p>
+        </div>
+        <div class="col-auto">
+            <a href="{% url 'admin_dashboard' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <h3 class="mb-0">{{ unverified_count }}</h3>
+                    <p class="mb-0">Pending Verification</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h3 class="mb-0">{{ verified_users|length }}</h3>
+                    <p class="mb-0">Recently Verified</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h3 class="mb-0">{{ unverified_users|length|add:verified_users|length }}</h3>
+                    <p class="mb-0">Total Users</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Unverified Users -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-warning text-white">
+            <h5 class="mb-0"><i class="fas fa-clock"></i> Pending Verification ({{ unverified_count }})</h5>
+        </div>
+        <div class="card-body">
+            {% if unverified_users %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Full Name</th>
+                                <th>Email</th>
+                                <th>ID Card Number</th>
+                                <th>Registered</th>
+                                <th>ID Proof</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in unverified_users %}
+                            <tr>
+                                <td><strong>{{ user.full_name }}</strong></td>
+                                <td>{{ user.email }}</td>
+                                <td><code>{{ user.id_card_number }}</code></td>
+                                <td>{{ user.created_at|date:"M d, Y H:i" }}</td>
+                                <td>
+                                    <a href="{% url 'view_id_proof' user.id %}" class="btn btn-sm btn-info" target="_blank">
+                                        <i class="fas fa-id-card"></i> View ID
+                                    </a>
+                                </td>
+                                <td>
+                                    <form method="post" action="{% url 'verify_user_action' user.id %}" style="display: inline;">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="verify">
+                                        <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Verify this user?')">
+                                            <i class="fas fa-check"></i> Verify
+                                        </button>
+                                    </form>
+                                    <form method="post" action="{% url 'verify_user_action' user.id %}" style="display: inline;">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="reject">
+                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Reject and delete this user?')">
+                                            <i class="fas fa-times"></i> Reject
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-check-circle text-success" style="font-size: 3rem;"></i>
+                    <p class="mt-3 text-muted">No pending verifications. All users are verified!</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Recently Verified Users -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0"><i class="fas fa-check-circle"></i> Recently Verified Users</h5>
+        </div>
+        <div class="card-body">
+            {% if verified_users %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Full Name</th>
+                                <th>Email</th>
+                                <th>ID Card Number</th>
+                                <th>Verified At</th>
+                                <th>Verified By</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in verified_users %}
+                            <tr>
+                                <td><strong>{{ user.full_name }}</strong></td>
+                                <td>{{ user.email }}</td>
+                                <td><code>{{ user.id_card_number }}</code></td>
+                                <td>{{ user.verified_at|date:"M d, Y H:i" }}</td>
+                                <td>{{ user.verified_by.full_name|default:"System" }}</td>
+                                <td>
+                                    {% if user.has_voted %}
+                                        <span class="badge bg-primary">Voted</span>
+                                    {% else %}
+                                        <span class="badge bg-info">Can Vote</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-users text-muted" style="font-size: 3rem;"></i>
+                    <p class="mt-3 text-muted">No verified users yet.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    border-radius: 10px;
+    transition: transform 0.2s;
+}
+
+.table-hover tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.75rem;
+}
+</style>
+{% endblock %}

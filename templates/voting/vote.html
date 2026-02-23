@@ -1,0 +1,159 @@
+{% extends "voting/base.html" %}
+{% load static %}
+
+{% block title %}Cast Your Vote - Online Voting System{% endblock %}
+
+{% block content %}
+<div class="voting-section py-5">
+    <div class="container">
+        <div class="row">
+            <div class="col-12">
+                <div class="voting-header text-center mb-5">
+                    <h1 class="display-4 fw-bold text-dark mb-3">
+                        <i class="fas fa-vote-yea text-primary me-3"></i>
+                        Cast Your Vote
+                    </h1>
+                    <p class="lead text-muted">Choose your candidate wisely. Your vote matters!</p>
+                    <div class="alert alert-info d-inline-block">
+                        <i class="fas fa-info-circle me-2"></i>
+                        You can vote only once. Choose carefully!
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        {% if candidates %}
+        <form method="post" id="voteForm">
+            {% csrf_token %}
+            <div class="row g-3 g-md-4">
+                {% for candidate in candidates %}
+                <div class="col-12 col-md-6 col-lg-4">
+                    <div class="candidate-card h-100" data-candidate-id="{{ candidate.id }}">
+                        <div class="candidate-header">
+                            <div class="candidate-avatar">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <h4 class="candidate-name fw-bold">{{ candidate.name }}</h4>
+                            <p class="candidate-party text-muted">{{ candidate.description }}</p>
+                        </div>
+                        
+                        <div class="candidate-body">
+                            <div class="candidate-info">
+                                <p class="text-muted mb-3">Candidate ID: #{{ candidate.id }}</p>
+                            </div>
+                            
+                            <button type="button" class="btn btn-primary btn-lg w-100 vote-btn" 
+                                    onclick="confirmVote({{ candidate.id }}, '{{ candidate.name }}')">
+                                <i class="fas fa-vote-yea me-2"></i>
+                                <span class="d-none d-sm-inline">Vote for </span>{{ candidate.name }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <input type="hidden" name="candidate_id" id="selectedCandidate">
+        </form>
+        {% else %}
+        <div class="row">
+            <div class="col-12">
+                <div class="alert alert-warning text-center">
+                    <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
+                    <h4>No Candidates Available</h4>
+                    <p class="mb-0">There are currently no candidates to vote for. Please check back later.</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function confirmVote(candidateId, candidateName) {
+    Swal.fire({
+        title: 'Confirm Your Vote',
+        html: `
+            <div class="text-center">
+                <i class="fas fa-vote-yea fa-3x text-primary mb-3"></i>
+                <h4>You are voting for:</h4>
+                <h3 class="text-primary fw-bold">${candidateName}</h3>
+                <p class="text-muted">This action cannot be undone!</p>
+            </div>
+        `,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#198754',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: '<i class="fas fa-check me-2"></i>Yes, Cast My Vote!',
+        cancelButtonText: '<i class="fas fa-times me-2"></i>Cancel',
+        reverseButtons: true
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            await castVote(candidateId, candidateName);
+        }
+    });
+}
+
+async function castVote(candidateId, candidateName) {
+    try {
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        
+        const response = await fetch('{% url "cast_vote_ajax" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({ candidate_id: candidateId })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Vote Cast Successfully!',
+                html: `
+                    <div class="text-center">
+                        <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                        <h4>Thank you for voting!</h4>
+                        <p>Your vote for <strong>${candidateName}</strong> has been recorded securely.</p>
+                    </div>
+                `,
+                confirmButtonColor: '#198754',
+                confirmButtonText: 'Continue'
+            }).then(() => {
+                window.location.href = '{% url "vote_success" %}';
+            });
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Vote Failed',
+                text: result.message,
+                confirmButtonColor: '#dc3545'
+            });
+        }
+    } catch (error) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'An error occurred while casting your vote. Please try again.',
+            confirmButtonColor: '#dc3545'
+        });
+    }
+}
+
+// Add hover effects to candidate cards
+document.querySelectorAll('.candidate-card').forEach(card => {
+    card.addEventListener('mouseenter', function() {
+        this.style.transform = 'translateY(-5px)';
+    });
+    
+    card.addEventListener('mouseleave', function() {
+        this.style.transform = 'translateY(0)';
+    });
+});
+</script>
+{% endblock %}

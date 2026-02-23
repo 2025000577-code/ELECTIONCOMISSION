@@ -1,0 +1,135 @@
+{% extends "voting/base.html" %}
+{% load static %}
+
+{% block title %}Home - Online Voting System{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <div class="container">
+        <div class="row align-items-center min-vh-100">
+            <div class="col-lg-6">
+                <div class="hero-content">
+                    <h1 class="display-4 fw-bold text-white mb-4">
+                        <i class="fas fa-vote-yea text-warning me-3"></i>
+                        Secure Online Voting
+                    </h1>
+                    <p class="lead text-white-50 mb-4">
+                        Experience democracy in the digital age. Cast your vote securely, transparently, and conveniently from anywhere.
+                    </p>
+                    <div class="hero-buttons">
+                        {% if not user.is_authenticated %}
+                            <a href="{% url 'register' %}" class="btn btn-warning btn-lg me-3 shadow-lg">
+                                <i class="fas fa-user-plus me-2"></i>Register to Vote
+                            </a>
+                            <a href="{% url 'login' %}" class="btn btn-outline-light btn-lg shadow-lg">
+                                <i class="fas fa-sign-in-alt me-2"></i>Login
+                            </a>
+                        {% else %}
+                            {% if user.is_admin %}
+                                <a href="{% url 'admin_dashboard' %}" class="btn btn-warning btn-lg shadow-lg">
+                                    <i class="fas fa-tachometer-alt me-2"></i>Admin Dashboard
+                                </a>
+                            {% else %}
+                                {% if user.has_voted %}
+                                    <a href="{% url 'vote_success' %}" class="btn btn-success btn-lg shadow-lg">
+                                        <i class="fas fa-check-circle me-2"></i>Vote Recorded
+                                    </a>
+                                {% else %}
+                                    <a href="{% url 'vote' %}" class="btn btn-warning btn-lg shadow-lg">
+                                        <i class="fas fa-vote-yea me-2"></i>Cast Your Vote
+                                    </a>
+                                {% endif %}
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="hero-image text-center">
+                    <i class="fas fa-ballot-check hero-icon text-warning"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Features Section -->
+<section class="features-section py-5">
+    <div class="container">
+        <div class="row text-center mb-5">
+            <div class="col-12">
+                <h2 class="display-5 fw-bold text-dark mb-3">Why Choose Our Voting System?</h2>
+                <p class="lead text-muted">Built with security, transparency, and user experience in mind</p>
+            </div>
+        </div>
+        
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="feature-card h-100">
+                    <div class="feature-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <h4 class="fw-bold mb-3">Secure & Private</h4>
+                    <p class="text-muted">Your vote is encrypted and anonymous. We use industry-standard security measures to protect your privacy.</p>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="feature-card h-100">
+                    <div class="feature-icon">
+                        <i class="fas fa-eye"></i>
+                    </div>
+                    <h4 class="fw-bold mb-3">Transparent</h4>
+                    <p class="text-muted">Real-time results and transparent counting process. Every vote matters and is counted accurately.</p>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="feature-card h-100">
+                    <div class="feature-icon">
+                        <i class="fas fa-mobile-alt"></i>
+                    </div>
+                    <h4 class="fw-bold mb-3">Accessible</h4>
+                    <p class="text-muted">Vote from anywhere, anytime. Our responsive design works perfectly on all devices.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Stats Section -->
+<section class="stats-section py-5 bg-light">
+    <div class="container">
+        <div class="row text-center g-3">
+            <div class="col-6 col-md-3 mb-3 mb-md-4">
+                <div class="stat-item">
+                    <i class="fas fa-users stat-icon text-primary"></i>
+                    <h3 class="fw-bold text-primary">{{ total_users }}+</h3>
+                    <p class="text-muted">Registered Voters</p>
+                </div>
+            </div>
+            <div class="col-6 col-md-3 mb-3 mb-md-4">
+                <div class="stat-item">
+                    <i class="fas fa-vote-yea stat-icon text-success"></i>
+                    <h3 class="fw-bold text-success">{{ total_votes }}+</h3>
+                    <p class="text-muted">Votes Cast</p>
+                </div>
+            </div>
+            <div class="col-6 col-md-3 mb-3 mb-md-4">
+                <div class="stat-item">
+                    <i class="fas fa-user-tie stat-icon text-warning"></i>
+                    <h3 class="fw-bold text-warning">{{ total_candidates }}</h3>
+                    <p class="text-muted">Candidates</p>
+                </div>
+            </div>
+            <div class="col-6 col-md-3 mb-3 mb-md-4">
+                <div class="stat-item">
+                    <i class="fas fa-shield-check stat-icon text-info"></i>
+                    <h3 class="fw-bold text-info">100%</h3>
+                    <p class="text-muted">Secure</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
