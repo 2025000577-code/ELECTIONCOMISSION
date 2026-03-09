@@ -136,12 +136,21 @@
         </div>
         
         <!-- Candidates and Results -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="alert alert-info">
+                    <i class="fas fa-shield-alt me-2"></i>
+                    <strong>Voting Integrity Notice:</strong> Vote counts are read-only and cannot be edited. Individual voter identities are protected and anonymous. This ensures fair and transparent elections.
+                </div>
+            </div>
+        </div>
+        
         <div class="row">
             <div class="col-12">
                 <div class="admin-card">
                     <div class="admin-card-header">
                         <h4 class="fw-bold mb-0">
-                            <i class="fas fa-chart-bar me-2"></i>Election Results
+                            <i class="fas fa-chart-bar me-2"></i>Election Results (Read-Only)
                         </h4>
                     </div>
                     <div class="admin-card-body">
@@ -155,7 +164,6 @@
                                         <th class="d-none d-sm-table-cell">Party/Description</th>
                                         <th>Votes</th>
                                         <th class="d-none d-lg-table-cell">Percentage</th>
-                                        <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -194,20 +202,6 @@
                                             {% else %}
                                                 <span class="text-muted">0%</span>
                                             {% endif %}
-                                        </td>
-                                        <td>
-                                            <div class="btn-group" role="group">
-                                                <a href="{% url 'edit_candidate' data.candidate.id %}" 
-                                                   class="btn btn-warning btn-sm"
-                                                   title="Edit Candidate">
-                                                    <i class="fas fa-edit"></i>
-                                                </a>
-                                                <button class="btn btn-danger btn-sm" 
-                                                        onclick="deleteCandidate({{ data.candidate.id }}, '{{ data.candidate.name }}')"
-                                                        title="Delete Candidate">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </div>
                                         </td>
                                     </tr>
                                     {% endfor %}
@@ -280,67 +274,6 @@ document.getElementById('addCandidateForm').addEventListener('submit', async fun
         });
     }
 });
-
-// Delete Candidate Function
-async function deleteCandidate(candidateId, candidateName) {
-    const result = await Swal.fire({
-        title: 'Delete Candidate?',
-        html: `
-            <div class="text-center">
-                <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
-                <h4>Are you sure you want to delete:</h4>
-                <h5 class="text-danger">${candidateName}</h5>
-                <p class="text-muted">This will also delete all votes for this candidate!</p>
-            </div>
-        `,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#dc3545',
-        cancelButtonColor: '#6c757d',
-        confirmButtonText: '<i class="fas fa-trash me-2"></i>Yes, Delete!',
-        cancelButtonText: '<i class="fas fa-times me-2"></i>Cancel'
-    });
-    
-    if (result.isConfirmed) {
-        try {
-            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-            
-            const response = await fetch(`/voting-admin/candidates/delete/${candidateId}/`, {
-                method: 'DELETE',
-                headers: {
-                    'X-CSRFToken': csrfToken
-                }
-            });
-            
-            const result = await response.json();
-            
-            if (result.success) {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Deleted!',
-                    text: result.message,
-                    confirmButtonColor: '#198754'
-                }).then(() => {
-                    location.reload();
-                });
-            } else {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: result.message,
-                    confirmButtonColor: '#dc3545'
-                });
-            }
-        } catch (error) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'An error occurred. Please try again.',
-                confirmButtonColor: '#dc3545'
-            });
-        }
-    }
-}
 
 // Auto-refresh results every 30 seconds
 setInterval(() => {

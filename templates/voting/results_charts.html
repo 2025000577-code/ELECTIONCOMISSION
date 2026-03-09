@@ -1,0 +1,392 @@
+{% extends 'voting/base.html' %}
+{% load static %}
+
+{% block title %}Live Results - Online Voting System{% endblock %}
+
+{% block extra_css %}
+<style>
+.chart-container {
+    position: relative;
+    height: 400px;
+    margin-bottom: 30px;
+}
+
+.stats-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 15px;
+    padding: 25px;
+    margin-bottom: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    transition: transform 0.3s;
+}
+
+.stats-card:hover {
+    transform: translateY(-5px);
+}
+
+.stats-number {
+    font-size: 3rem;
+    font-weight: bold;
+    margin: 10px 0;
+}
+
+.stats-label {
+    font-size: 1.1rem;
+    opacity: 0.9;
+}
+
+.live-indicator {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    background: #ff4444;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+    margin-right: 8px;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+.chart-card {
+    background: white;
+    border-radius: 15px;
+    padding: 30px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    margin-bottom: 30px;
+}
+
+.winner-badge {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+    padding: 15px 30px;
+    border-radius: 50px;
+    font-size: 1.5rem;
+    display: inline-block;
+    margin: 20px 0;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+.refresh-info {
+    background: #e3f2fd;
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12 text-center">
+            <h1 class="display-4 mb-3">
+                <i class="fas fa-chart-line me-3"></i>Live Election Results
+            </h1>
+            <div class="refresh-info">
+                <span class="live-indicator"></span>
+                <strong>LIVE</strong> - Updates automatically every 5 seconds
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="stats-card">
+                <i class="fas fa-vote-yea fa-2x mb-2"></i>
+                <div class="stats-number" id="totalVotes">{{ total_votes }}</div>
+                <div class="stats-label">Total Votes</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="stats-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                <i class="fas fa-users fa-2x mb-2"></i>
+                <div class="stats-number" id="totalVoters">{{ total_users }}</div>
+                <div class="stats-label">Registered Voters</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="stats-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                <i class="fas fa-percentage fa-2x mb-2"></i>
+                <div class="stats-number" id="turnoutPercent">
+                    {% if total_users > 0 %}
+                        {{ total_votes|floatformat:0 }}%
+                    {% else %}
+                        0%
+                    {% endif %}
+                </div>
+                <div class="stats-label">Voter Turnout</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="stats-card" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                <i class="fas fa-user-tie fa-2x mb-2"></i>
+                <div class="stats-number" id="totalCandidates">{{ total_candidates }}</div>
+                <div class="stats-label">Candidates</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Winner Announcement -->
+    {% if total_votes > 0 %}
+    <div class="row mb-4">
+        <div class="col-12 text-center">
+            <div class="winner-badge">
+                <i class="fas fa-crown me-2"></i>
+                Leading: <span id="leadingCandidate">{{ leading_candidate.name }}</span>
+                with <span id="leadingVotes">{{ leading_candidate.votes }}</span> votes
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Charts -->
+    <div class="row">
+        <!-- Bar Chart -->
+        <div class="col-lg-6 mb-4">
+            <div class="chart-card">
+                <h4 class="mb-4">
+                    <i class="fas fa-chart-bar me-2"></i>Vote Distribution
+                </h4>
+                <div class="chart-container">
+                    <canvas id="barChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pie Chart -->
+        <div class="col-lg-6 mb-4">
+            <div class="chart-card">
+                <h4 class="mb-4">
+                    <i class="fas fa-chart-pie me-2"></i>Vote Percentage
+                </h4>
+                <div class="chart-container">
+                    <canvas id="pieChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Doughnut Chart -->
+    <div class="row">
+        <div class="col-lg-12 mb-4">
+            <div class="chart-card">
+                <h4 class="mb-4">
+                    <i class="fas fa-chart-area me-2"></i>Detailed Results
+                </h4>
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="doughnutChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Back Button -->
+    <div class="row">
+        <div class="col-12 text-center">
+            <a href="{% url 'home' %}" class="btn btn-primary btn-lg">
+                <i class="fas fa-home me-2"></i>Back to Home
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<script>
+let barChart, pieChart, doughnutChart;
+
+// Color palette
+const colors = [
+    'rgba(255, 99, 132, 0.8)',
+    'rgba(54, 162, 235, 0.8)',
+    'rgba(255, 206, 86, 0.8)',
+    'rgba(75, 192, 192, 0.8)',
+    'rgba(153, 102, 255, 0.8)',
+    'rgba(255, 159, 64, 0.8)',
+    'rgba(199, 199, 199, 0.8)',
+    'rgba(83, 102, 255, 0.8)',
+];
+
+// Fetch live data
+async function fetchLiveData() {
+    try {
+        const response = await fetch('/api/live-results/');
+        const data = await response.json();
+        updateCharts(data);
+        updateStats(data);
+    } catch (error) {
+        console.error('Error fetching live data:', error);
+    }
+}
+
+// Update statistics
+function updateStats(data) {
+    document.getElementById('totalVotes').textContent = data.total_votes;
+    document.getElementById('totalVoters').textContent = data.total_users;
+    document.getElementById('totalCandidates').textContent = data.candidates.length;
+    
+    const turnout = data.total_users > 0 ? 
+        Math.round((data.total_votes / data.total_users) * 100) : 0;
+    document.getElementById('turnoutPercent').textContent = turnout + '%';
+    
+    if (data.candidates.length > 0 && data.total_votes > 0) {
+        const leading = data.candidates[0];
+        document.getElementById('leadingCandidate').textContent = leading.name;
+        document.getElementById('leadingVotes').textContent = leading.votes;
+    }
+}
+
+// Initialize charts
+function initCharts(data) {
+    const labels = data.candidates.map(c => c.name);
+    const votes = data.candidates.map(c => c.votes);
+    
+    // Bar Chart
+    const barCtx = document.getElementById('barChart').getContext('2d');
+    barChart = new Chart(barCtx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Votes',
+                data: votes,
+                backgroundColor: colors,
+                borderColor: colors.map(c => c.replace('0.8', '1')),
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                title: {
+                    display: true,
+                    text: 'Votes per Candidate',
+                    font: { size: 16 }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { stepSize: 1 }
+                }
+            },
+            animation: {
+                duration: 1000,
+                easing: 'easeInOutQuart'
+            }
+        }
+    });
+
+    // Pie Chart
+    const pieCtx = document.getElementById('pieChart').getContext('2d');
+    pieChart = new Chart(pieCtx, {
+        type: 'pie',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: votes,
+                backgroundColor: colors,
+                borderColor: '#fff',
+                borderWidth: 3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { padding: 15, font: { size: 12 } }
+                },
+                title: {
+                    display: true,
+                    text: 'Vote Share',
+                    font: { size: 16 }
+                }
+            },
+            animation: {
+                animateRotate: true,
+                animateScale: true
+            }
+        }
+    });
+
+    // Doughnut Chart
+    const doughnutCtx = document.getElementById('doughnutChart').getContext('2d');
+    doughnutChart = new Chart(doughnutCtx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: votes,
+                backgroundColor: colors,
+                borderColor: '#fff',
+                borderWidth: 3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: { padding: 20, font: { size: 14 } }
+                },
+                title: {
+                    display: true,
+                    text: 'Complete Vote Breakdown',
+                    font: { size: 18 }
+                }
+            },
+            cutout: '60%'
+        }
+    });
+}
+
+// Update charts with new data
+function updateCharts(data) {
+    const labels = data.candidates.map(c => c.name);
+    const votes = data.candidates.map(c => c.votes);
+    
+    if (barChart) {
+        barChart.data.labels = labels;
+        barChart.data.datasets[0].data = votes;
+        barChart.update('active');
+    }
+    
+    if (pieChart) {
+        pieChart.data.labels = labels;
+        pieChart.data.datasets[0].data = votes;
+        pieChart.update('active');
+    }
+    
+    if (doughnutChart) {
+        doughnutChart.data.labels = labels;
+        doughnutChart.data.datasets[0].data = votes;
+        doughnutChart.update('active');
+    }
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', async function() {
+    const response = await fetch('/api/live-results/');
+    const data = await response.json();
+    initCharts(data);
+    
+    // Auto-refresh every 5 seconds
+    setInterval(fetchLiveData, 5000);
+});
+</script>
+{% endblock %}

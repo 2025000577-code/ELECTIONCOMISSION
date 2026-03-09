@@ -8,6 +8,13 @@ urlpatterns = [
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
     path('results/', views.results_view, name='results'),
+    path('results/live/', views.results_charts_view, name='results_charts'),
+    
+    # API endpoints
+    path('api/live-results/', views.live_results_api, name='live_results_api'),
+    path('api/notifications/', views.notifications_api, name='notifications_api'),
+    path('api/notifications/<int:notification_id>/read/', views.mark_notification_read, name='mark_notification_read'),
+    path('api/notifications/mark-all-read/', views.mark_all_notifications_read, name='mark_all_notifications_read'),
     
     # User voting
     path('vote/', views.vote_view, name='vote'),

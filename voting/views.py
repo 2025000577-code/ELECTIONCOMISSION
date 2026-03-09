@@ -169,6 +169,16 @@ def vote_view(request):
                 request.user.has_voted = True
                 request.user.save()
                 
+                # Create success notification
+                from .models import Notification
+                Notification.objects.create(
+                    user=request.user,
+                    title="Vote Recorded Successfully! ✓",
+                    message=f"Your vote has been securely recorded. Thank you for participating in the election!",
+                    notification_type='success',
+                    link='/results/live/'
+                )
+                
                 # Log successful vote (without revealing candidate for anonymity)
                 security_logger.info(f"User {request.user.email} successfully voted from IP {get_client_ip(request)}")
             
@@ -423,6 +433,8 @@ def verify_users_view(request):
 @user_passes_test(lambda u: u.is_admin)
 def verify_user_action(request, user_id):
     """Admin action to verify or reject a user"""
+    from .models import Notification
+    
     if request.method != 'POST':
         return redirect('verify_users')
     
@@ -434,6 +446,15 @@ def verify_user_action(request, user_id):
         user.verified_at = timezone.now()
         user.verified_by = request.user
         user.save()
+        
+        # Create notification for user
+        Notification.objects.create(
+            user=user,
+            title="Account Verified! 🎉",
+            message=f"Your account has been verified by {request.user.full_name}. You can now cast your vote!",
+            notification_type='success',
+            link='/vote/'
+        )
         
         security_logger.info(f"Admin {request.user.email} verified user {user.email} from IP {get_client_ip(request)}")
         messages.success(request, f'User {user.full_name} has been verified successfully!')
@@ -515,3 +536,110 @@ def edit_candidate_ajax(request, candidate_id):
     except Exception as e:
         security_logger.error(f"Error editing candidate by admin {request.user.email} from IP {get_client_ip(request)}: {str(e)}")
         return JsonResponse({'success': False, 'message': 'An error occurred while updating the candidate.'})
+
+
+@require_http_methods(["GET"])
+def live_results_api(request):
+    """API endpoint for live results data"""
+    from django.db.models import Count
+    
+    candidates = Candidate.objects.filter(is_active=True).annotate(
+        vote_count=Count('votes')
+    ).order_by('-vote_count')
+    
+    candidates_data = [{
+        'id': c.id,
+        'name': c.name,
+        'description': c.description,
+        'votes': c.vote_count
+    } for c in candidates]
+    
+    total_votes = Vote.objects.count()
+    total_users = User.objects.filter(is_admin=False).count()
+    
+    return JsonResponse({
+        'candidates': candidates_data,
+        'total_votes': total_votes,
+        'total_users': total_users,
+        'timestamp': timezone.now().isoformat()
+    })
+
+
+def results_charts_view(request):
+    """Live results with charts"""
+    from django.db.models import Count
+    
+    candidates = Candidate.objects.filter(is_active=True).annotate(
+        vote_count=Count('votes')
+    ).order_by('-vote_count')
+    
+    total_votes = Vote.objects.count()
+    total_users = User.objects.filter(is_admin=False).count()
+    total_candidates = candidates.count()
+    
+    leading_candidate = None
+    if candidates.exists() and total_votes > 0:
+        leading = candidates.first()
+        leading_candidate = {
+            'name': leading.name,
+            'votes': leading.vote_count
+        }
+    
+    context = {
+        'total_votes': total_votes,
+        'total_users': total_users,
+        'total_candidates': total_candidates,
+        'leading_candidate': leading_candidate,
+    }
+    
+    return render(request, 'voting/results_charts.html', context)
+
+
+@login_required
+@require_http_methods(["GET"])
+def notifications_api(request):
+    """API endpoint for user notifications"""
+    from .models import Notification
+    
+    notifications = Notification.objects.filter(user=request.user)[:20]
+    unread_count = notifications.filter(is_read=False).count()
+    
+    notifications_data = [{
+        'id': n.id,
+        'title': n.title,
+        'message': n.message,
+        'notification_type': n.notification_type,
+        'is_read': n.is_read,
+        'created_at': n.created_at.isoformat(),
+        'link': n.link
+    } for n in notifications]
+    
+    return JsonResponse({
+        'notifications': notifications_data,
+        'unread_count': unread_count
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
+def mark_notification_read(request, notification_id):
+    """Mark a notification as read"""
+    from .models import Notification
+    
+    try:
+        notification = Notification.objects.get(id=notification_id, user=request.user)
+        notification.is_read = True
+        notification.save()
+        return JsonResponse({'success': True})
+    except Notification.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Notification not found'}, status=404)
+
+
+@login_required
+@require_http_methods(["POST"])
+def mark_all_notifications_read(request):
+    """Mark all notifications as read"""
+    from .models import Notification
+    
+    Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+    return JsonResponse({'success': True})
